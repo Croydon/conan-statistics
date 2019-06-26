@@ -101,13 +101,6 @@ def print_statistics(name, settings):
     total = 0
     for data in settings:
         for value in data.values():
-            # header-only
-            if "arch" not in value and \
-               "compiler" not in value and \
-               "arch_build" not in value and \
-               "os" not in value and \
-               "os_build" not in value:
-                continue
             # in case of installer package
             arch_key = "arch_build" if "arch_build" in value else "arch"
             os_key = "os_build" if "os_build" in value else "arch"
@@ -115,6 +108,14 @@ def print_statistics(name, settings):
             downloads = value["downloads"]
             total += downloads
             TOTAL_DOWNLOADS += downloads
+
+            # header-only
+            if "arch" not in value and \
+               "compiler" not in value and \
+               "arch_build" not in value and \
+               "os" not in value and \
+               "os_build" not in value:
+                continue
 
             if arch_key in value:
                 arch[value[arch_key]] += downloads
@@ -251,14 +252,12 @@ def get_allowed_owners():
 
 
 if __name__ == "__main__":
-    browser = create_browser()
+    browser = None
     try:
         logging.info("Retrieve all recipes from Conan center")
         official_recipes = get_recipe_list_from_bintray()
         # {"protobuf": ["protobuf/1.3.6@bincrafers/stable", ...], ...}
         official_recipes = filter_recipe_list_by_name(official_recipes)
-        logging.info("Bintray Browser login")
-        browser = login(browser)
         # for each package name
         for key, values in official_recipes.items():
             # First package reference
@@ -270,6 +269,9 @@ if __name__ == "__main__":
             # We can't retrieve statistics from any user
             if json_data["owner"] not in get_allowed_owners():
                 continue
+            logging.info("Bintray Browser login")
+            browser = create_browser()
+            browser = login(browser)
             logging.info("Retrieve all logs for package %s" % key)
             packages = get_package_logs(browser, json_data["owner"], json_data["repo"], conan_ref.name, conan_ref.user)
             # package settings
@@ -282,6 +284,7 @@ if __name__ == "__main__":
                 settings.extend(filter_package_info_by_version(packages, bintray_packages))
             # Print package statistics
             print_statistics(key, settings)
+            browser.close()
         # Print TOTAL statistics
         print_total_statistics()
     finally:
