@@ -198,8 +198,11 @@ def print_total_statistics():
         generic_list.append([key, value])
     print(tabulate(generic_list, ["OS", "Downloads"], tablefmt="grid"))
 
-    print("TOTAL: {}".format(TOTAL_DOWNLOADS))
+    print("TOTAL: {}\n".format(TOTAL_DOWNLOADS))
 
+    print(TOTAL_ARCH)
+    print(TOTAL_COMPILER)
+    print(TOTAL_OS)
 
 def get_recipe_list_from_file(file_path):
     with open(file_path, "r") as json_file:
