@@ -7,6 +7,7 @@ import requests
 import logging
 import gzip
 import glob
+import time
 from collections import defaultdict
 
 from tabulate import tabulate
@@ -212,6 +213,9 @@ def get_package_logs(browser, subject, repo, package, user):
             # extract file name
             url = href[href.rfind('=') + 1:]
             browser.find_element_by_link_text(url).click()
+            # wait for download
+            while not os.path.exists(os.path.join("/tmp", url)):
+                time.sleep(1)
             with gzip.open(os.path.join("/tmp", url), 'rb') as gzip_file:
                 values = gzip_file.read().decode().split(',')
                 # filter only package download
