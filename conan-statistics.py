@@ -239,6 +239,7 @@ def get_package_owner_repo(reference):
         return response.json()
     else:
         logging.error(response.text)
+        return None
 
 
 def get_allowed_owners():
@@ -260,6 +261,8 @@ if __name__ == "__main__":
             conan_ref = ConanFileReference.loads(values[0])
             # Retrieve linked repo name which is pointed by Conan center
             json_data = get_package_owner_repo(conan_ref.full_repr())
+            if not json_data:
+                continue
             # We can't retrieve statistics from any user
             if json_data["owner"] not in get_allowed_owners():
                 continue
