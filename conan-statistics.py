@@ -52,17 +52,35 @@ def get_recipe_list_from_bintray(remote="conan-center"):
     return [recipe["recipe"]["id"] for recipe in packages["results"][0]["items"]]
 
 
-def filter_recipe_list_by_name(recipe_list):
-    recipes = defaultdict(list)
+def paginate_recipe_list(recipe_list):
     total_pages = int(os.getenv("CONAN_TOTAL_PAGES", 0))
     current_page = int(os.getenv("CONAN_CURRENT_PAGE", 0))
     if total_pages and current_page:
-        slice_list = []
-        for index, recipe in enumerate(recipe_list):
-            if (index % total_pages) + 1 == current_page:
-                slice_list.append(recipe)
-        recipe_list = slice_list
+        names = set()
+        for recipe in recipe_list:
+            conan_ref = ConanFileReference.loads(recipe)
+            names.add(conan_ref.name)
 
+        avg = len(names) / float(total_pages)
+        chunks = []
+        last = 0.0
+        while last < len(names):
+            chunks.append(names[int(last):int(last + avg)])
+            last += avg
+        chunk = chunks[current_page - 1]
+
+        filtered_list = []
+        for name in chunk:
+            for recipe in recipe_list:
+                if name in recipe:
+                    filtered_list.append(recipe)
+        recipe_list = filtered_list
+    return recipe_list
+
+
+def filter_recipe_list_by_name(recipe_list):
+    recipes = defaultdict(list)
+    recipe_list = paginate_recipe_list(recipe_list)
     for recipe in recipe_list:
         conan_ref = ConanFileReference.loads(recipe)
         recipes[conan_ref.name].append(conan_ref.full_repr())
