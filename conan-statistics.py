@@ -183,16 +183,24 @@ def login(browser):
     password = os.getenv("BINTRAY_PASSWORD")
     if not username or not password:
         raise Exception("Login failed! BINTRAY_USERNAME and BINTRAY_PASSWORD must be configured!")
-
     login_url = "https://bintray.com/login?forwardedFrom=%2F"
-    browser.get(login_url)
-    browser_title = browser.title
-    browser.find_element_by_id("username").send_keys(username)
-    browser.find_element_by_id("password").send_keys(password)
-    browser.find_element_by_class_name("btn").click()
+    retry_limit = 10
+    while True:
+        retry = 0
+        browser.get(login_url)
+        browser_title = browser.title
+        browser.find_element_by_id("username").send_keys(username)
+        browser.find_element_by_id("password").send_keys(password)
+        browser.find_element_by_class_name("btn").click()
 
-    while browser_title == browser.title:
-        time.sleep(1)
+        while browser_title == browser.title:
+            time.sleep(1)
+            retry += 1
+            if retry == retry_limit:
+                break
+
+        if browser_title != browser.title:
+            break
 
     return browser
 
