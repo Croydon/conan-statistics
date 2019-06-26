@@ -217,6 +217,10 @@ def get_package_logs(browser, subject, repo, package, user):
             # wait for download
             while not os.path.exists(os.path.join("/tmp", url)):
                 time.sleep(1)
+            while os.path.exists(os.path.join("/tmp", url + ".crdownload")):
+                time.sleep(1)
+            while os.path.exists(os.path.join("/tmp", url + ".part")):
+                time.sleep(1)
             with gzip.open(os.path.join("/tmp", url), 'rb') as gzip_file:
                 values = gzip_file.read().decode().split(',')
                 # filter only package download
