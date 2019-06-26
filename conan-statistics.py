@@ -20,6 +20,7 @@ from bs4 import BeautifulSoup
 from selenium.webdriver.firefox.options import Options
 from conans.client import conan_api
 from conans.model.ref import ConanFileReference
+from selenium.common.exceptions import NoSuchElementException
 
 
 TOTAL_DOWNLOADS = 0
@@ -238,7 +239,15 @@ def download_file(browser, url):
         url_path = os.path.join("/tmp", url)
         if os.path.exists(url_path):
             os.remove(url_path)
-        browser.find_element_by_link_text(url).click()
+
+        while True:
+            try:
+                browser.find_element_by_link_text(url).click()
+                break
+            except NoSuchElementException:
+                browser.refresh()
+                WebDriverWait(browser, 60).until(EC.presence_of_element_located((By.LINK_TEXT, 'Download Logs'))).click()
+
         # wait for download
         while not os.path.exists(url_path):
             time.sleep(1)
