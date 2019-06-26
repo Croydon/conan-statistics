@@ -26,7 +26,7 @@ TOTAL_ARCH = defaultdict(int)
 TOTAL_COMPILER = defaultdict(int)
 TOTAL_OS = defaultdict(int)
 FORMAT = '%(asctime)-15s: %(message)s'
-logging.basicConfig(format=FORMAT, level=logging.DEBUG)
+logging.basicConfig(format=FORMAT, level=logging.INFO)
 
 
 def create_browser():
@@ -248,11 +248,11 @@ def get_allowed_owners():
 if __name__ == "__main__":
     browser = create_browser()
     try:
-        # Retrieve all recipes from Conan center
+        logging.info("Retrieve all recipes from Conan center")
         official_recipes = get_recipe_list_from_bintray()
         # {"protobuf": ["protobuf/1.3.6@bincrafers/stable", ...], ...}
         official_recipes = filter_recipe_list_by_name(official_recipes)
-        # Bintray Browser login
+        logging.info("Bintray Browser login")
         browser = login(browser)
         # for each package name
         for key, values in official_recipes.items():
@@ -263,7 +263,7 @@ if __name__ == "__main__":
             # We can't retrieve statistics from any user
             if json_data["owner"] not in get_allowed_owners():
                 continue
-            # Retrieve all logs for package name (does not require version)
+            logging.info("Retrieve all logs for package %s" % key)
             packages = get_package_logs(browser, json_data["owner"], json_data["repo"], conan_ref.name, conan_ref.user)
             # package settings
             settings = []
