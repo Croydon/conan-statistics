@@ -1,9 +1,9 @@
 version: 2
 
 .build-steps: &build-steps
+  docker:
+    - image: conanio/gcc8:latest
   steps:
-    docker:
-      - image: conanio/gcc8:latest
     - checkout
     - run:
         name: Install
