@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import json
-import time
+import magic
 import os
 import requests
 import logging
@@ -197,6 +197,23 @@ def login(browser):
     return browser
 
 
+def download_file(browser, url):
+    while True:
+        url_path = os.path.join("/tmp", url)
+        if os.path.exists(url_path):
+            os.remove(url_path)
+        browser.find_element_by_link_text(url).click()
+        # wait for download
+        while not os.path.exists(url_path):
+            time.sleep(1)
+        while os.path.exists(url_path + ".crdownload"):
+            time.sleep(1)
+        while os.path.exists(url_path + ".part"):
+            time.sleep(1)
+        if magic.from_file(url_path, mime=True) == 'application/gzip':
+            break
+
+
 def get_package_logs(browser, subject, repo, package, user):
     # remove temporary files
     for gz_file in glob.glob(os.path.join("/tmp", "*.csv.gz")):
@@ -209,18 +226,10 @@ def get_package_logs(browser, subject, repo, package, user):
     for link in soup.find_all('a'):
         # look for csv files on statistics page
         if "href" in link.attrs and "csv.gz" in link.attrs['href']:
-            url = "https://bintray.com" + link.attrs['href']
             href = link.attrs['href']
             # extract file name
             url = href[href.rfind('=') + 1:]
-            browser.find_element_by_link_text(url).click()
-            # wait for download
-            while not os.path.exists(os.path.join("/tmp", url)):
-                time.sleep(1)
-            while os.path.exists(os.path.join("/tmp", url + ".crdownload")):
-                time.sleep(1)
-            while os.path.exists(os.path.join("/tmp", url + ".part")):
-                time.sleep(1)
+            download_file(browser, url)
             with gzip.open(os.path.join("/tmp", url), 'rb') as gzip_file:
                 values = gzip_file.read().decode().split(',')
                 # filter only package download
