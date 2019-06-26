@@ -1,3 +1,4 @@
-selenium
-bs4
-conan
+selenium==3.141.0
+bs4==0.0.1
+conan==1.16.1
+tabulate==0.8.2

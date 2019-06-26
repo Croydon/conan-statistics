@@ -14,5 +14,10 @@ Python tool to check statistics about Conan + Bintray
 * Gecko Driver
 * Python
 
+#### Troubleshooting
+
+* Bintray Timeout: Increase request timeout: `export CONAN_REQUEST_TIMEOUT=3600`
+
+
 #### LICENSE
 [MIT](LICENSE)
