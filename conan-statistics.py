@@ -307,7 +307,7 @@ if __name__ == "__main__":
         official_recipes = get_recipe_list_from_bintray()
         # {"protobuf": ["protobuf/1.3.6@bincrafers/stable", ...], ...}
         official_recipes = filter_recipe_list_by_name(official_recipes)
-        logging.info("Recipes to be analyzed: {}".format(official_recipes.keys()))
+        logging.info("Recipes to be analyzed({}): {}".format(len(official_recipes.keys()), official_recipes.keys()))
         # for each package name
         for key, values in official_recipes.items():
             # First package reference
