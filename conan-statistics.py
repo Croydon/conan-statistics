@@ -103,7 +103,7 @@ def print_statistics(name, settings):
         for value in data.values():
             # in case of installer package
             arch_key = "arch_build" if "arch_build" in value else "arch"
-            os_key = "os_build" if "os_build" in value else "arch"
+            os_key = "os_build" if "os_build" in value else "os"
 
             downloads = value["downloads"]
             total += downloads
