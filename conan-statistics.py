@@ -61,6 +61,7 @@ def paginate_recipe_list(recipe_list):
             conan_ref = ConanFileReference.loads(recipe)
             names.add(conan_ref.name)
 
+        names = list(names)
         avg = len(names) / float(total_pages)
         chunks = []
         last = 0.0
