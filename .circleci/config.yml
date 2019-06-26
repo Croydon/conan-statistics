@@ -1,0 +1,24 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: conanio/gcc6:latest
+    steps:
+      - checkout
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y firefox wget
+          pushd /tmp
+          wget https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-linux64.tar.gz
+          tar xzf geckodriver-v0.24.0-linux64.tar.gz
+          chmod +x geckodriver
+          sudo mv geckodriver /usr/bin/geckodriver
+          popd
+          pip install -r requirements.txt
+          python conan-statistics.py
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build
