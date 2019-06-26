@@ -54,6 +54,15 @@ def get_recipe_list_from_bintray(remote="conan-center"):
 
 def filter_recipe_list_by_name(recipe_list):
     recipes = defaultdict(list)
+    total_pages = int(os.getenv("CONAN_TOTAL_PAGES", 0))
+    current_page = int(os.getenv("CONAN_CURRENT_PAGE", 0))
+    if total_pages and current_page:
+        slice_list = []
+        for index, recipe in enumerate(recipe_list):
+            if (index % total_pages) + 1 == current_page:
+                slice_list.append(recipe)
+        recipe_list = slice_list
+
     for recipe in recipe_list:
         conan_ref = ConanFileReference.loads(recipe)
         recipes[conan_ref.name].append(conan_ref.full_repr())

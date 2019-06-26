@@ -1,11 +1,13 @@
 version: 2
-jobs:
-  build:
+
+.build-steps: &build-steps
+  steps:
     docker:
-      - image: conanio/gcc6:latest
-    steps:
-      - checkout
-      - run: |
+      - image: conanio/gcc8:latest
+    - checkout
+    - run:
+        name: Install
+        command: |
           sudo apt-get update
           sudo apt-get install -y firefox wget
           pushd /tmp
@@ -15,10 +17,63 @@ jobs:
           sudo mv geckodriver /usr/bin/geckodriver
           popd
           pip install -r requirements.txt
+    - run:
+        name: Collect statistics
+        command: |
           python conan-statistics.py
+        environment:
+          CONAN_TOTAL_PAGES: "8"
+
+jobs:
+  page-1:
+    environment:
+      - CONAN_CURRENT_PAGE: "1"
+    <<: *build-steps
+
+  page-2:
+    environment:
+      - CONAN_CURRENT_PAGE: "2"
+    <<: *build-steps
+
+  page-3:
+    environment:
+      - CONAN_CURRENT_PAGE: "3"
+    <<: *build-steps
+
+  page-4:
+    environment:
+      - CONAN_CURRENT_PAGE: "4"
+    <<: *build-steps
+
+  page-5:
+    environment:
+      - CONAN_CURRENT_PAGE: "5"
+    <<: *build-steps
+
+  page-6:
+    environment:
+      - CONAN_CURRENT_PAGE: "6"
+    <<: *build-steps
+
+  page-7:
+    environment:
+      - CONAN_CURRENT_PAGE: "7"
+    <<: *build-steps
+
+  page-8:
+    environment:
+      - CONAN_CURRENT_PAGE: "8"
+    <<: *build-steps
 
 workflows:
   version: 2
   build_and_test:
     jobs:
-      - build
+      - page-1
+      - page-2
+      - page-3
+      - page-4
+      - page-5
+      - page-6
+      - page-7
+      - page-8
