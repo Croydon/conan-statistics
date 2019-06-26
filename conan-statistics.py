@@ -26,7 +26,7 @@ TOTAL_ARCH = defaultdict(int)
 TOTAL_COMPILER = defaultdict(int)
 TOTAL_OS = defaultdict(int)
 FORMAT = '%(asctime)-15s: %(message)s'
-logging.basicConfig(format=FORMAT, level=logging.INFO)
+logging.basicConfig(format=FORMAT, level=logging.DEBUG)
 
 
 def create_browser():
