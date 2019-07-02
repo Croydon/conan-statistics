@@ -3,11 +3,15 @@
 import json
 import magic
 import os
+import sys
 import requests
 import logging
 import gzip
 import glob
 import time
+import datetime
+import pandas
+import tempfile
 from collections import defaultdict
 
 from tabulate import tabulate
@@ -21,12 +25,15 @@ from selenium.webdriver.firefox.options import Options
 from conans.client import conan_api
 from conans.model.ref import ConanFileReference
 from selenium.common.exceptions import NoSuchElementException
+from bintray.bintray import Bintray
 
 
 TOTAL_DOWNLOADS = 0
+IP_ADDRESSES = []
 TOTAL_ARCH = defaultdict(int)
 TOTAL_COMPILER = defaultdict(int)
 TOTAL_OS = defaultdict(int)
+TOTAL_CLIENT = defaultdict(int)
 FORMAT = '%(asctime)-15s: %(message)s'
 logging.basicConfig(format=FORMAT, level=logging.INFO)
 
@@ -100,7 +107,7 @@ def filter_package_info_by_version(packages_from_logs, packages_from_api):
     # {'3.5.2': {'2bb76c9adac7b8cd7c5e3b377ac9f06934aba606': 17, ...
     # The bad
     for version in packages_from_logs.keys():
-        # [{'recipe': {'id': 'protobuf/3.6.1@bincrafters/stable'}, 'packages' ...
+        # [{'recipe': {'id': 'protobuf/3.6.1@bincrafters/stable'}, 'packages' ...F
         # The ugly
         for package in packages_from_api:
             ref = ConanFileReference.loads(package["recipe"]["id"])
@@ -204,6 +211,32 @@ def print_total_statistics():
     print(TOTAL_COMPILER)
     print(TOTAL_OS)
 
+
+def upload_total_statistics():
+    total_address = defaultdict(int)
+    for address in IP_ADDRESSES:
+        total_address[get_ip_owner(address)] += 1
+
+    total = [
+        TOTAL_ARCH,
+        TOTAL_COMPILER,
+        TOTAL_OS,
+        total_address,
+        {"total": TOTAL_DOWNLOADS},
+    ]
+
+    today = datetime.date.today()
+    date = today.strftime("%Y%m%d")
+    now = today.strftime("%H%M%S")
+    job = os.getenv("CIRCLE_JOB", now)
+    filename = "statistics-{}_{}.json".format(date, now, job)
+
+    with open(filename, 'w') as outfile:
+        json.dump(total, outfile)
+
+    upload_file(filename)
+
+
 def get_recipe_list_from_file(file_path):
     with open(file_path, "r") as json_file:
         data = json.load(json_file)
@@ -288,6 +321,10 @@ def get_package_logs(browser, subject, repo, package, user):
                     version = value[5]
                     package_id = value[9]
                     packages[version][package_id] = packages[version].get(package_id, 0) + 1
+            _, temp_path = tempfile.mkstemp(suffix=".csv")
+            global IP_ADDRESSES
+            IP_ADDRESSES = collect_ips(temp_path)
+
     return packages
 
 
@@ -310,6 +347,52 @@ def get_package_owner_repo(reference):
 
 def get_allowed_owners():
     return os.getenv("BINTRAY_ALLOWED_OWNERS", "").split() if os.getenv("BINTRAY_ALLOWED_OWNERS") else ["conan-community", "bincrafters"]
+
+
+def get_ip_owner(ip_address):
+    appveyor = ["67.225.164.53", "67.225.164.54", "67.225.164.96", "67.225.165.66", "67.225.165.168", "67.225.165.171",
+                "67.225.165.175", "67.225.165.183", "67.225.165.185", "67.225.165.193", "67.225.165.198",
+                "67.225.165.200", "104.197.110.30", "104.197.145.181", "34.208.156.238", "34.209.164.53",
+                "34.216.199.18", "52.43.29.82", "52.89.56.249", "54.200.227.141", "13.83.108.89", "138.91.141.243"]
+    travis = ["207.254.16.35", "207.254.16.36", "207.254.16.37", "207.254.16.38", "207.254.16.39", "34.66.178.120",
+              "34.68.144.114", "35.184.96.71", "35.184.226.236", "35.188.1.99", "35.188.73.34", "35.192.85.2",
+              "35.192.136.167", "35.192.187.174", "35.193.7.13", "35.193.14.140", "35.202.145.110", "35.224.112.202",
+              "104.154.113.151", "104.154.120.187", "104.198.131.58", "34.66.178.120", "34.68.144.114", "35.184.96.71",
+              "35.184.226.236", "35.188.1.99", "35.188.73.34", "35.192.85.2", "35.192.136.167", "35.192.187.174",
+              "35.193.7.13", "35.193.14.140", "35.202.145.110", "35.224.112.202", "104.154.113.151", "104.154.120.187",
+              "104.198.131.58"]
+    if ip_address in appveyor:
+        return "Appveyor"
+    elif ip_address in travis:
+        return "Travis"
+    else:
+        return "Unknown"
+
+
+def upload_file(file):
+    remote = os.getenv("BINTRAY_REMOTE")
+    username = os.getenv("BINTRAY_USERNAME")
+    apikey = os.getenv("BINTRAY_API_KEY")
+    if not username or not apikey or not remote:
+        logging.error("Could not upload. Login missing")
+        return
+
+    subject, repo, package = remote.split('/')
+    bintray = Bintray()
+    today = datetime.date.today()
+    version = today.strftime("%Y%m%d")
+    basename = os.path.basename(file)
+    try:
+        logging.info("Uploading {}".format(basename))
+        bintray.upload_content(subject, repo, package, version, basename, file, override=True)
+        logging.info("Done!")
+    except Exception as error:
+        logging.error(str(error))
+
+
+def collect_ips(file):
+    data = pandas.read_csv(file)
+    return data.ip_address
 
 
 if __name__ == "__main__":
@@ -349,6 +432,7 @@ if __name__ == "__main__":
             browser.close()
         # Print TOTAL statistics
         print_total_statistics()
+        upload_total_statistics()
     finally:
         if browser:
             browser.quit()
