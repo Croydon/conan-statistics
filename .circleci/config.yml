@@ -1,6 +1,6 @@
 version: 2
 
-.install-steps: &install-steps
+.build-steps: &build-steps
   docker:
     - image: conanio/gcc8:latest
   steps:
@@ -17,8 +17,6 @@ version: 2
           sudo mv geckodriver /usr/bin/geckodriver
           popd
           pip install -r requirements.txt
-
-.build-steps: &build-steps
     - run:
         name: Collect statistics
         no_output_timeout: 1200
@@ -31,49 +29,41 @@ jobs:
   page-1:
     environment:
       - CONAN_CURRENT_PAGE: "1"
-    <<: *install-steps
     <<: *build-steps
 
   page-2:
     environment:
       - CONAN_CURRENT_PAGE: "2"
-    <<: *install-steps
     <<: *build-steps
 
   page-3:
     environment:
       - CONAN_CURRENT_PAGE: "3"
-    <<: *install-steps
     <<: *build-steps
 
   page-4:
     environment:
       - CONAN_CURRENT_PAGE: "4"
-    <<: *install-steps
     <<: *build-steps
 
   page-5:
     environment:
       - CONAN_CURRENT_PAGE: "5"
-    <<: *install-steps
     <<: *build-steps
 
   page-6:
     environment:
       - CONAN_CURRENT_PAGE: "6"
-    <<: *install-steps
     <<: *build-steps
 
   page-7:
     environment:
       - CONAN_CURRENT_PAGE: "7"
-    <<: *install-steps
     <<: *build-steps
 
   page-8:
     environment:
       - CONAN_CURRENT_PAGE: "8"
-    <<: *install-steps
     <<: *build-steps
     
   merge-all-pages:
