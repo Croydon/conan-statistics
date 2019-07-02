@@ -77,12 +77,27 @@ jobs:
     <<: *build-steps
     
   merge-all-pages:
-    <<: *install-steps
-        - run:
-            name: Collect Total statistics
-            no_output_timeout: 1200
-            command: |
-              python collect-results.py
+    docker:
+      - image: conanio/gcc8:latest
+    steps:
+      - checkout
+      - run:
+          name: Install
+          command: |
+            sudo apt-get update
+            sudo apt-get install -y firefox wget
+            pushd /tmp
+            wget https://github.com/mozilla/geckodriver/releases/download/v0.24.0/geckodriver-v0.24.0-linux64.tar.gz
+            tar xzf geckodriver-v0.24.0-linux64.tar.gz
+            chmod +x geckodriver
+            sudo mv geckodriver /usr/bin/geckodriver
+            popd
+            pip install -r requirements.txt
+      - run:
+          name: Collect Total statistics
+          no_output_timeout: 1200
+          command: |
+            python collect-results.py
 
 
 workflows:
