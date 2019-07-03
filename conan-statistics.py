@@ -312,7 +312,10 @@ def get_package_logs(browser, subject, repo, package, user):
             url = href[href.rfind('=') + 1:]
             download_file(browser, url)
             with gzip.open(os.path.join("/tmp", url), 'rb') as gzip_file:
-                values = gzip_file.read().decode().split(',')
+                content = gzip_file.read()
+                with open("temp.csv", 'wb') as temp_csv:
+                    temp_csv.write(content)
+                values = content.decode().split(',')
                 # filter only package download
                 values = [value for value in values if "conan_package.tgz" in value]
                 for value in values:
@@ -321,8 +324,6 @@ def get_package_logs(browser, subject, repo, package, user):
                     version = value[5]
                     package_id = value[9]
                     packages[version][package_id] = packages[version].get(package_id, 0) + 1
-                with open("temp.csv", 'wb') as temp_csv:
-                    temp_csv.write(gzip_file.read())
                 global IP_ADDRESSES
                 IP_ADDRESSES = collect_ips("temp.csv")
 
