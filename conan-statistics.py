@@ -321,9 +321,10 @@ def get_package_logs(browser, subject, repo, package, user):
                     version = value[5]
                     package_id = value[9]
                     packages[version][package_id] = packages[version].get(package_id, 0) + 1
-            _, temp_path = tempfile.mkstemp(suffix=".csv")
-            global IP_ADDRESSES
-            IP_ADDRESSES = collect_ips(temp_path)
+                with open("temp.csv", 'w') as temp_csv:
+                    temp_csv.write(gzip_file.read())
+                global IP_ADDRESSES
+                IP_ADDRESSES = collect_ips("temp.csv")
 
     return packages
 
