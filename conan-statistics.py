@@ -13,7 +13,7 @@ import datetime
 import time
 import pandas
 import tempfile
-import ntplib
+import uuid
 from collections import defaultdict
 
 from tabulate import tabulate
@@ -229,10 +229,8 @@ def upload_total_statistics():
 
     today = datetime.date.today()
     date = today.strftime("%Y%m%d")
-    client = ntplib.NTPClient()
-    response = client.request('pool.ntp.org')
-    now = time.strftime('%H%M%S',time.localtime(response.tx_time))
-    job = os.getenv("CIRCLE_JOB", now)
+    unique = uuid.uuid4()
+    job = os.getenv("CIRCLE_JOB", unique)
     filename = "statistics-{}_{}.json".format(date, job)
 
     with open(filename, 'w') as outfile:
