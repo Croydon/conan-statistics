@@ -5,3 +5,4 @@ tabulate==0.8.2
 python-magic==0.4.15
 pandas==0.24.2
 bintray-python==0.1.0
+ntplib==0.3.3

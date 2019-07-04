@@ -10,8 +10,10 @@ import gzip
 import glob
 import time
 import datetime
+import time
 import pandas
 import tempfile
+import ntplib
 from collections import defaultdict
 
 from tabulate import tabulate
@@ -227,9 +229,11 @@ def upload_total_statistics():
 
     today = datetime.date.today()
     date = today.strftime("%Y%m%d")
-    now = today.strftime("%H%M%S")
+    client = ntplib.NTPClient()
+    response = client.request('pool.ntp.org')
+    now = time.strftime('%H%M%S',time.localtime(response.tx_time)
     job = os.getenv("CIRCLE_JOB", now)
-    filename = "statistics-{}_{}.json".format(date, now, job)
+    filename = "statistics-{}_{}.json".format(date, job)
 
     with open(filename, 'w') as outfile:
         json.dump(total, outfile)
