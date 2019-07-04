@@ -231,7 +231,7 @@ def upload_total_statistics():
     date = today.strftime("%Y%m%d")
     client = ntplib.NTPClient()
     response = client.request('pool.ntp.org')
-    now = time.strftime('%H%M%S',time.localtime(response.tx_time)
+    now = time.strftime('%H%M%S',time.localtime(response.tx_time))
     job = os.getenv("CIRCLE_JOB", now)
     filename = "statistics-{}_{}.json".format(date, job)
 
