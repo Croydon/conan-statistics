@@ -161,7 +161,6 @@ def get_packages(bintray, organization, repo):
     old_temp = None
     packages = []
     while page is not None:
-        print(page)
         curr_temp = bintray.get_packages(organization, repo, start_pos=page)
         if not curr_temp:
             break
@@ -177,5 +176,5 @@ if __name__ == "__main__":
     bintray = Bintray()
     packages = get_packages(bintray, "conan-community", "conan")
     for package in packages:
-        show_package_downloads(bintray, "conan-community", "conan", package)
+        show_package_downloads(bintray, "conan-community", "conan", package["name"])
     show_total()
