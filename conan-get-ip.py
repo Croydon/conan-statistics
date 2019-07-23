@@ -3,6 +3,7 @@
 import os
 import tempfile
 import gzip
+import shutil
 from bisect import bisect_left
 import pandas
 import humanfriendly
@@ -57,6 +58,14 @@ def today():
     return datetime.now().strftime("%d-%m-%Y")
 
 
+def compress(file_name):
+    file_gz = file_name + '.gz'
+    with open(file_name) as f_in:
+        with gzip.open(file_gz, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    return file_gz
+
+
 def show_total():
     pd_block = pandas.concat(TOTAL_FRAMES, axis=0, ignore_index=True)
     size = len(pd_block.index)
@@ -67,7 +76,7 @@ def show_total():
     print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
     file_name = "conan-center-{}.csv".format(today())
     pd_block.to_csv(file_name)
-    return file_name
+    return compress(file_name)
 
 
 def show_package_downloads(bintray, organization, repo, package):
