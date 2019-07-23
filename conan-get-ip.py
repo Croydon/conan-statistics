@@ -141,7 +141,7 @@ if __name__ == "__main__":
     bintray = Bintray()
     packages = get_packages(bintray, "conan", "conan-center")
     for package in packages:
-        name = package["name"]
+        name = package.get("name") or ""
         if ":conan" in name:
             show_package_downloads(bintray, "conan-community", "conan", name)
         elif ":bincrafters" in name:
