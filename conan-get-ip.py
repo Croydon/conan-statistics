@@ -74,9 +74,9 @@ def show_total():
     #print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
     print("Countries: {}".format(pd_block.pivot_table(index=['country'], aggfunc='size')))
     print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
-    file_name = "conan-center-{}.csv".format(today())
-    pd_block.to_csv(file_name)
-    return compress(file_name)
+    file_name = "conan-center-{}.csv.gz".format(today())
+    pd_block.to_csv(file_name, index=False, compression='gzip')
+    return file_name
 
 
 def show_package_downloads(bintray, organization, repo, package):
@@ -102,6 +102,7 @@ def show_package_downloads(bintray, organization, repo, package):
                 date = os.path.basename(dst_name)[10:-4]
                 date = datetime.strptime(date, '%d-%m-%Y')
                 pd_frame.insert(0, 'date', date)
+                pd_frame.insert(1, 'package', package)
                 #pd_frame.insert(2, 'provider', "Unknown")
                 for index, row in pd_frame.iterrows():
                     pd_frame.at[index, 'path_information'] = os.path.basename(row.path_information)
