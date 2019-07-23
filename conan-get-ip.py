@@ -61,6 +61,7 @@ def show_total():
     #print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
     print("Countries: {}".format(pd_block.pivot_table(index=['country'], aggfunc='size')))
     print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
+    pd_block.to_csv("conan-community.csv")
 
 
 def show_package_downloads(bintray, organization, repo, package):
@@ -78,23 +79,18 @@ def show_package_downloads(bintray, organization, repo, package):
         for file in to_be_downloaded:
             local_name = os.path.join(temp_folder, file)
             dst_name = local_name[:-3]
-            print("Downloading {}".format(file))
             bintray.download_package_download_log_file(organization, repo, package, file, local_name)
-            print("Inflating ...")
             uncompress(local_name, dst_name)
             usecols = ['ip_address', 'country', 'path_information']
-            print("Loading Pandas frame ...")
             pd_frame = pandas.read_csv(dst_name, usecols=usecols)
             date = os.path.basename(dst_name)[10:-4]
             date = datetime.strptime(date, '%d-%m-%Y')
-            print("Inserting columns")
             pd_frame.insert(0, 'date', date)
             #pd_frame.insert(2, 'provider', "Unknown")
             for index, row in pd_frame.iterrows():
                 pd_frame.at[index, 'path_information'] = os.path.basename(row.path_information)
             pd_list.append(pd_frame)
             TOTAL_FRAMES.append(pd_frame)
-        print("Merging Pandas frames ...")
         pd_block = pandas.concat(pd_list, axis=0, ignore_index=True)
         pd_block.sort_values(by='date')
 
@@ -131,8 +127,11 @@ def get_packages(bintray, organization, repo):
 if __name__ == "__main__":
     bintray = Bintray()
     load_providers()
-    packages = get_packages(bintray, "conan-community", "conan")
+    packages = get_packages(bintray, "conan", "conan-center")
     for package in packages:
-        show_package_downloads(bintray, "conan-community", "conan", package["name"])
-        break
+        name = package["name"]
+        if ":conan" in name:
+            show_package_downloads(bintray, "conan-community", "conan", name)
+        elif ":bincrafters" in name:
+            show_package_downloads(bintray, "bincrafters", "public-conan", name)
     show_total()
