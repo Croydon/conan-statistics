@@ -53,6 +53,10 @@ def show_quota(bintray, organization):
     print("Monthly Free Downloads Quota Limit: {}".format(humanfriendly.format_size(response["monthly_free_downloads_quota_limit"])))
 
 
+def today():
+    return datetime.now().strftime("%d-%m-%Y")
+
+
 def show_total():
     pd_block = pandas.concat(TOTAL_FRAMES, axis=0, ignore_index=True)
     size = len(pd_block.index)
@@ -61,51 +65,60 @@ def show_total():
     #print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
     print("Countries: {}".format(pd_block.pivot_table(index=['country'], aggfunc='size')))
     print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
-    pd_block.to_csv("conan-community.csv")
+    file_name = "conan-center-{}.csv".format(today())
+    pd_block.to_csv(file_name)
+    return file_name
 
 
 def show_package_downloads(bintray, organization, repo, package):
-    global TOTAL_FRAMES
-    to_be_downloaded = []
-    print("Package {}".format(package))
-    response = bintray.get_list_package_download_log_files(organization, repo, package)
-    for log in response:
-        if "name" in log and "csv.gz" in log["name"]:
-            to_be_downloaded.append(log["name"])
+    try:
+        global TOTAL_FRAMES
+        to_be_downloaded = []
+        print("Package {}".format(package))
+        response = bintray.get_list_package_download_log_files(organization, repo, package)
+        for log in response:
+            if "name" in log and "csv.gz" in log["name"]:
+                to_be_downloaded.append(log["name"])
 
-    if to_be_downloaded:
-        temp_folder = tempfile.mkdtemp(package, organization)
-        pd_list = []
-        for file in to_be_downloaded:
-            local_name = os.path.join(temp_folder, file)
-            dst_name = local_name[:-3]
-            bintray.download_package_download_log_file(organization, repo, package, file, local_name)
-            uncompress(local_name, dst_name)
-            usecols = ['ip_address', 'country', 'path_information']
-            pd_frame = pandas.read_csv(dst_name, usecols=usecols)
-            date = os.path.basename(dst_name)[10:-4]
-            date = datetime.strptime(date, '%d-%m-%Y')
-            pd_frame.insert(0, 'date', date)
-            #pd_frame.insert(2, 'provider', "Unknown")
-            for index, row in pd_frame.iterrows():
-                pd_frame.at[index, 'path_information'] = os.path.basename(row.path_information)
-            pd_list.append(pd_frame)
-            TOTAL_FRAMES.append(pd_frame)
-        pd_block = pandas.concat(pd_list, axis=0, ignore_index=True)
-        pd_block.sort_values(by='date')
+        if to_be_downloaded:
+            temp_folder = tempfile.mkdtemp(package, organization)
+            pd_list = []
+            for file in to_be_downloaded:
+                local_name = os.path.join(temp_folder, file)
+                dst_name = local_name[:-3]
+                bintray.download_package_download_log_file(organization, repo, package, file, local_name)
+                uncompress(local_name, dst_name)
+                usecols = ['ip_address', 'country', 'path_information']
+                pd_frame = pandas.read_csv(dst_name, usecols=usecols)
+                date = os.path.basename(dst_name)[10:-4]
+                date = datetime.strptime(date, '%d-%m-%Y')
+                pd_frame.insert(0, 'date', date)
+                #pd_frame.insert(2, 'provider', "Unknown")
+                for index, row in pd_frame.iterrows():
+                    pd_frame.at[index, 'path_information'] = os.path.basename(row.path_information)
+                pd_list.append(pd_frame)
+                TOTAL_FRAMES.append(pd_frame)
+            pd_block = pandas.concat(pd_list, axis=0, ignore_index=True)
+            pd_block.sort_values(by='date')
 
-        #for ip, count in pd_block.pivot_table(index=['ip_address'], aggfunc='size').items():
-        #    provider = get_provider(ip)
-        #    pd_block.loc[pd_block.ip_address == ip, 'provider'] = provider
+            #for ip, count in pd_block.pivot_table(index=['ip_address'], aggfunc='size').items():
+            #    provider = get_provider(ip)
+            #    pd_block.loc[pd_block.ip_address == ip, 'provider'] = provider
 
-        size = len(pd_block.index)
+            size = len(pd_block.index)
 
-        print("Package: {}".format(package))
-        print("Downloads Total: {}".format(size))
-        print("Date range {} - {}".format(pd_block.at[0, "date"], pd_block.at[size-1, "date"]))
-        #print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
-        print("Countries: {}".format(pd_block.pivot_table(index=['country'], aggfunc='size')))
-        print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
+            print("Package: {}".format(package))
+            print("Downloads Total: {}".format(size))
+            print("Date range {} - {}".format(pd_block.at[0, "date"], pd_block.at[size-1, "date"]))
+            #print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
+            print("Countries: {}".format(pd_block.pivot_table(index=['country'], aggfunc='size')))
+            print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
+    except:
+        pass
+
+
+def upload_file():
+    pass
 
 
 def get_packages(bintray, organization, repo):
@@ -126,7 +139,6 @@ def get_packages(bintray, organization, repo):
 
 if __name__ == "__main__":
     bintray = Bintray()
-    load_providers()
     packages = get_packages(bintray, "conan", "conan-center")
     for package in packages:
         name = package["name"]
@@ -134,4 +146,6 @@ if __name__ == "__main__":
             show_package_downloads(bintray, "conan-community", "conan", name)
         elif ":bincrafters" in name:
             show_package_downloads(bintray, "bincrafters", "public-conan", name)
-    show_total()
+    file_name = show_total()
+    bintray.upload_content("uilianries", "generic", "statistics", today(), file_name, file_name,
+                           override=True)
