@@ -24,6 +24,14 @@ def uncompress(src, dst):
             fd_dst.write(bindata)
 
 
+def compress(file_name):
+    file_gz = file_name + '.gz'
+    with open(file_name, "rb") as f_in:
+        with gzip.open(file_gz, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)
+    return file_gz
+
+
 def load_providers():
     global PROVIDERS
     with open("providers.json") as json_file:
@@ -56,14 +64,6 @@ def show_quota(bintray, organization):
 
 def today():
     return datetime.now().strftime("%d-%m-%Y")
-
-
-def compress(file_name):
-    file_gz = file_name + '.gz'
-    with open(file_name) as f_in:
-        with gzip.open(file_gz, 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
-    return file_gz
 
 
 def show_total():
