@@ -3,6 +3,7 @@
 import os
 import tempfile
 import gzip
+from bisect import bisect_left
 import pandas
 import humanfriendly
 import json
@@ -12,6 +13,7 @@ from bintray.bintray import Bintray
 
 
 TOTAL_FRAMES = []
+PROVIDERS = None
 
 
 def uncompress(src, dst):
@@ -21,81 +23,22 @@ def uncompress(src, dst):
             fd_dst.write(bindata)
 
 
-def get_provider(ip_address):
-    providers = {
-        # https://docs.travis-ci.com/user/ip-addresses/
-        "Travis": [
-            "104.154.113.151",
-            "104.154.120.187",
-            "104.198.131.58",
-            "207.254.16.35",
-            "207.254.16.36",
-            "207.254.16.37",
-            "207.254.16.38",
-            "207.254.16.39",
-            "34.66.178.120",
-            "34.66.200.49",
-            "34.66.25.221",
-            "34.66.50.208",
-            "34.68.144.114",
-            "35.184.226.236",
-            "35.184.96.71",
-            "35.188.1.99",
-            "35.188.73.34",
-            "35.192.136.167",
-            "35.192.187.174",
-            "35.192.85.2",
-            "35.193.14.140",
-            "35.193.7.13",
-            "35.202.145.110",
-            "35.202.245.105",
-            "35.224.112.202"
-        ],
-        # https://www.appveyor.com/docs/build-environment/?origin_team=T2QUFRG2E#ip-addresses
-        "Appveyor": [
-            "104.197.110.30",
-            "104.197.145.181",
-            "67.225.164.53",
-            "67.225.164.54",
-            "67.225.164.96",
-            "67.225.165.66",
-            "67.225.165.168",
-            "67.225.165.171",
-            "67.225.165.175",
-            "67.225.165.183",
-            "67.225.165.185",
-            "67.225.165.193",
-            "67.225.165.198",
-            "67.225.165.200",
-            "34.208.156.238",
-            "34.209.164.53",
-            "34.216.199.18",
-            "52.43.29.82",
-            "52.89.56.249",
-            "54.200.227.141",
-            "13.83.108.89",
-            "138.91.141.243"
-        ]
+def load_providers():
+    global PROVIDERS
+    with open("providers.json") as json_file:
+        PROVIDERS = json.load(json_file)
 
-    }
-    for provider, ips in providers.items():
-        if ip_address in ips:
+
+def get_provider(ip_address):
+    for provider, ips in PROVIDERS.items():
+        index = bisect_left(ips, ip_address)
+        if index != len(ips) and ips[index] == ip_address:
             return provider
 
-    with open('amazon_ip_range.json') as json_file:
-        json_data = json.load(json_file)
-        for prefix in json_data["prefixes"]:
-            if ip_address in prefix["ip_prefix"] or \
-               IPv4Address(ip_address) in IPv4Network(prefix["ip_prefix"]):
-                return "Amazon (CircleCI)"
-
-    with open('azure_ip_range.json') as json_file:
-        json_data = json.load(json_file)
-        for prefix in json_data["values"]:
-            for address_prefix in prefix["properties"]["addressPrefixes"]:
-                if ip_address in address_prefix or \
-                   IPv4Address(ip_address) in IPv4Network(address_prefix):
-                    return "Azure"
+        if provider == "Azure" or provider == "Amazon":
+            for prefix_ip in ips:
+                if IPv4Address(ip_address) in IPv4Network(prefix_ip):
+                    return provider
 
     return "Unknown"
 
@@ -113,14 +56,17 @@ def show_quota(bintray, organization):
 def show_total():
     pd_block = pandas.concat(TOTAL_FRAMES, axis=0, ignore_index=True)
     size = len(pd_block.index)
+    print("=== TOTAL ===")
     print("Downloads Total: {}".format(size))
     print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
     print("Countries: {}".format(pd_block.pivot_table(index=['country'], aggfunc='size')))
+    print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
 
 
 def show_package_downloads(bintray, organization, repo, package):
     global TOTAL_FRAMES
     to_be_downloaded = []
+    print("Package {}".format(package))
     response = bintray.get_list_package_download_log_files(organization, repo, package)
     for log in response:
         if "name" in log and "csv.gz" in log["name"]:
@@ -132,21 +78,30 @@ def show_package_downloads(bintray, organization, repo, package):
         for file in to_be_downloaded:
             local_name = os.path.join(temp_folder, file)
             dst_name = local_name[:-3]
+            print("Downloading {}".format(file))
             bintray.download_package_download_log_file(organization, repo, package, file, local_name)
+            print("Inflating ...")
             uncompress(local_name, dst_name)
             usecols = ['ip_address', 'country', 'path_information']
+            print("Loading Pandas frame ...")
             pd_frame = pandas.read_csv(dst_name, usecols=usecols)
             date = os.path.basename(dst_name)[10:-4]
             date = datetime.strptime(date, '%d-%m-%Y')
+            print("Inserting columns")
             pd_frame.insert(0, 'date', date)
             pd_frame.insert(2, 'provider', "Unknown")
             for index, row in pd_frame.iterrows():
                 pd_frame.at[index, 'path_information'] = os.path.basename(row.path_information)
-                pd_frame.at[index, 'provider'] = get_provider(row.ip_address)
             pd_list.append(pd_frame)
             TOTAL_FRAMES.append(pd_frame)
+        print("Merging Pandas frames ...")
         pd_block = pandas.concat(pd_list, axis=0, ignore_index=True)
         pd_block.sort_values(by='date')
+
+        for ip, count in pd_block.pivot_table(index=['ip_address'], aggfunc='size').items():
+            provider = get_provider(ip)
+            pd_block.loc[pd_block.ip_address == ip, 'provider'] = provider
+
         size = len(pd_block.index)
 
         print("Package: {}".format(package))
@@ -154,6 +109,7 @@ def show_package_downloads(bintray, organization, repo, package):
         print("Date range {} - {}".format(pd_block.at[0, "date"], pd_block.at[size-1, "date"]))
         print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
         print("Countries: {}".format(pd_block.pivot_table(index=['country'], aggfunc='size')))
+        print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
 
 
 def get_packages(bintray, organization, repo):
@@ -174,7 +130,9 @@ def get_packages(bintray, organization, repo):
 
 if __name__ == "__main__":
     bintray = Bintray()
+    load_providers()
     packages = get_packages(bintray, "conan-community", "conan")
     for package in packages:
         show_package_downloads(bintray, "conan-community", "conan", package["name"])
+        break
     show_total()
