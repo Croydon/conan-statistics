@@ -58,7 +58,7 @@ def show_total():
     size = len(pd_block.index)
     print("=== TOTAL ===")
     print("Downloads Total: {}".format(size))
-    print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
+    #print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
     print("Countries: {}".format(pd_block.pivot_table(index=['country'], aggfunc='size')))
     print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
 
@@ -89,7 +89,7 @@ def show_package_downloads(bintray, organization, repo, package):
             date = datetime.strptime(date, '%d-%m-%Y')
             print("Inserting columns")
             pd_frame.insert(0, 'date', date)
-            pd_frame.insert(2, 'provider', "Unknown")
+            #pd_frame.insert(2, 'provider', "Unknown")
             for index, row in pd_frame.iterrows():
                 pd_frame.at[index, 'path_information'] = os.path.basename(row.path_information)
             pd_list.append(pd_frame)
@@ -98,16 +98,16 @@ def show_package_downloads(bintray, organization, repo, package):
         pd_block = pandas.concat(pd_list, axis=0, ignore_index=True)
         pd_block.sort_values(by='date')
 
-        for ip, count in pd_block.pivot_table(index=['ip_address'], aggfunc='size').items():
-            provider = get_provider(ip)
-            pd_block.loc[pd_block.ip_address == ip, 'provider'] = provider
+        #for ip, count in pd_block.pivot_table(index=['ip_address'], aggfunc='size').items():
+        #    provider = get_provider(ip)
+        #    pd_block.loc[pd_block.ip_address == ip, 'provider'] = provider
 
         size = len(pd_block.index)
 
         print("Package: {}".format(package))
         print("Downloads Total: {}".format(size))
         print("Date range {} - {}".format(pd_block.at[0, "date"], pd_block.at[size-1, "date"]))
-        print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
+        #print("Providers: {}".format(pd_block.pivot_table(index=['provider'], aggfunc='size')))
         print("Countries: {}".format(pd_block.pivot_table(index=['country'], aggfunc='size')))
         print("IPs: {}".format(pd_block.pivot_table(index=['ip_address'], aggfunc='size')))
 
